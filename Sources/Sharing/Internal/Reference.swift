@@ -44,6 +44,7 @@ public protocol MutableReference<Value>: Reference, Equatable {
 
 final class _BoxReference<Value>: MutableReference, Observable, Perceptible, @unchecked Sendable {
   private let _$perceptionRegistrar = PerceptionRegistrar(isPerceptionCheckingEnabled: false)
+  private let ownedObservation = SharedObservationSource()
   private let lock = NSRecursiveLock()
 
   #if canImport(Combine)
@@ -135,6 +136,7 @@ final class _BoxReference<Value>: MutableReference, Observable, Perceptible, @un
     line: UInt = #line,
     column: UInt = #column
   ) {
+    ownedObservation.access(keyPath)
     _$perceptionRegistrar.access(
       self,
       keyPath: keyPath,
@@ -150,12 +152,15 @@ final class _BoxReference<Value>: MutableReference, Observable, Perceptible, @un
     _ mutation: () throws -> MutationResult
   ) rethrows -> MutationResult {
     #if os(WASI)
+      ownedObservation.willSet(keyPath)
       return try _$perceptionRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
     #else
       if Thread.isMainThread {
+        ownedObservation.willSet(keyPath)
         return try _$perceptionRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
       } else {
         DispatchQueue.main.async {
+          self.ownedObservation.willSet(keyPath)
           self._$perceptionRegistrar.withMutation(of: self, keyPath: keyPath) {}
         }
         return try mutation()
@@ -172,6 +177,7 @@ final class _PersistentReference<Key: SharedReaderKey>:
   Reference, Observable, Perceptible, @unchecked Sendable
 {
   private let _$perceptionRegistrar = PerceptionRegistrar(isPerceptionCheckingEnabled: false)
+  private let ownedObservation = SharedObservationSource()
   private let key: Key
   private let lock = NSRecursiveLock()
 
@@ -319,6 +325,7 @@ final class _PersistentReference<Key: SharedReaderKey>:
     line: UInt = #line,
     column: UInt = #column
   ) {
+    ownedObservation.access(keyPath)
     _$perceptionRegistrar.access(
       self,
       keyPath: keyPath,
@@ -334,12 +341,15 @@ final class _PersistentReference<Key: SharedReaderKey>:
     _ mutation: () throws -> MutationResult
   ) rethrows -> MutationResult {
     #if os(WASI)
+      ownedObservation.willSet(keyPath)
       return try _$perceptionRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
     #else
       if Thread.isMainThread {
+        ownedObservation.willSet(keyPath)
         return try _$perceptionRegistrar.withMutation(of: self, keyPath: keyPath, mutation)
       } else {
         DispatchQueue.main.async {
+          self.ownedObservation.willSet(keyPath)
           self._$perceptionRegistrar.withMutation(of: self, keyPath: keyPath) {}
         }
         return try mutation()
