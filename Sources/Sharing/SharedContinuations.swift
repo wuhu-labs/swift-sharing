@@ -142,10 +142,11 @@ public struct SharedSubscription: Sendable {
     }
 
     func cancel() {
-      onCancel.withLock { onCancel in
+      let cancel = onCancel.withLock { onCancel in
         defer { onCancel = nil }
-        onCancel?()
+        return onCancel
       }
+      cancel?()
     }
 
     deinit {
