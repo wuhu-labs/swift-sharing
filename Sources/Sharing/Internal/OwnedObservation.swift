@@ -23,8 +23,9 @@ public final class SharedObservationSource: @unchecked Sendable {
     lock.unlock()
     return SharedSubscription { [self] in
       lock.lock()
-      observers.removeValue(forKey: id)
+      let removed = observers.removeValue(forKey: id)
       lock.unlock()
+      withExtendedLifetime(removed) {}
     }
   }
 
